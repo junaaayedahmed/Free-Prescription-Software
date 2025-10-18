@@ -2,12 +2,22 @@
 In this new era prescriptions are no longer hand written. To ensure proper follow up we also need patient database. Due to increased cost of prescription softwares it's sometimes unaffordable or causes medical expenses to rise. So I have developed this software to help my colleagues and doctors all over the world
 
 
-
 Features:
 1. Patient Database
+   <img width="1280" height="719" alt="image" src="https://github.com/user-attachments/assets/b8e4f689-cf93-4a73-90bb-fcfc37f07117" />
+
 2. Easy prescription Tab
+<img width="1280" height="719" alt="image" src="https://github.com/user-attachments/assets/fc6243ea-b436-42ee-8699-c6c39f4e3b62" />
+<img width="1366" height="768" alt="Screenshot from 2025-10-18 19-46-32" src="https://github.com/user-attachments/assets/0120f92e-dd2b-42f5-945a-d3922183a16f" />
+
+
 3. Manage Doctor info
+   <img width="1280" height="719" alt="image" src="https://github.com/user-attachments/assets/9a8a56cd-7880-423d-852a-78a04e361dbb" />
+
+
 4. Drug database
+   <img width="1366" height="768" alt="Screenshot from 2025-10-18 19-47-27" src="https://github.com/user-attachments/assets/559ac5a4-88ae-4de4-a3a4-960b830dc68e" />
+
 5. Investigation Database
 6. Advise Database
 
