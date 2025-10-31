@@ -2486,7 +2486,7 @@ class MedicalPrescriptionSystemPyQt(QMainWindow):
                         <div class="section">
                             <div class="section-title">Investigations:</div>
                             <div class="section-content">
-                                <div class="investigations-list">{prescription[7].replace('\n', '<br>• ') or 'Not specified'}</div>
+                                <div class="investigations-list">• {prescription[7].replace('\n', '<br>• ') or 'Not specified'}</div>
                             </div>
                         </div>
                     </div>
