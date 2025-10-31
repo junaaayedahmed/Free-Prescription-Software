@@ -24,6 +24,55 @@ import re
 import subprocess
 import tempfile
 
+class FullScreenImageDialog(QDialog):
+    """Dialog for displaying images in full screen"""
+    def __init__(self, image_path, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Image Viewer")
+        self.setWindowState(Qt.WindowFullScreen)
+        self.setModal(True)
+        
+        layout = QVBoxLayout(self)
+        
+        # Image label
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setStyleSheet("background-color: black;")
+        layout.addWidget(self.image_label)
+        
+        # Close button
+        close_btn = QPushButton("Close (ESC)")
+        close_btn.clicked.connect(self.close)
+        close_btn.setStyleSheet("QPushButton { background-color: #f44336; color: white; font-weight: bold; padding: 10px; }")
+        layout.addWidget(close_btn)
+        
+        self.load_image(image_path)
+    
+    def load_image(self, image_path):
+        """Load and display image"""
+        if os.path.exists(image_path):
+            pixmap = QPixmap(image_path)
+            if not pixmap.isNull():
+                # Scale to fit screen while maintaining aspect ratio
+                screen_geometry = QApplication.primaryScreen().availableGeometry()
+                scaled_pixmap = pixmap.scaled(
+                    screen_geometry.width() - 100, 
+                    screen_geometry.height() - 150,
+                    Qt.KeepAspectRatio, 
+                    Qt.SmoothTransformation
+                )
+                self.image_label.setPixmap(scaled_pixmap)
+            else:
+                self.image_label.setText("Invalid image file")
+        else:
+            self.image_label.setText("Image file not found")
+    
+    def keyPressEvent(self, event):
+        """Handle key press events"""
+        if event.key() == Qt.Key_Escape:
+            self.close()
+        super().keyPressEvent(event)
+
 class MedicalPrescriptionSystemPyQt(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -864,19 +913,70 @@ class MedicalPrescriptionSystemPyQt(QMainWindow):
         drug_details_layout = QGridLayout()
         
         drug_details_layout.addWidget(QLabel("Dose/Frequency:"), 0, 0)
-        self.dosage_entry = QLineEdit()
-        self.dosage_entry.setPlaceholderText("e.g., 1+0+1")
-        drug_details_layout.addWidget(self.dosage_entry, 0, 1)
+        
+        # ComboBox for common dose frequencies with custom entry option - NOW WITH BENGALI
+        dose_frequency_layout = QHBoxLayout()
+        self.dosage_combo = QComboBox()
+        self.dosage_combo.setEditable(True)  # Allow custom entry
+        # English frequencies
+        self.dosage_combo.addItems([
+            "0+0+1", "0+1+0", "1+0+0", "0+1+1", 
+            "1+0+1", "1+1+0", "1+1+1", "1+0+0+1",
+            "1+1+1+1", "0+0+0+1", "SOS", "When required"
+        ])
+        # Bengali frequencies
+        self.dosage_combo.addItems([
+            "০+০+১", "০+১+০", "১+০+০", "০+১+১", 
+            "১+০+১", "১+১+০", "১+১+১", "১+০+০+১",
+            "১+১+১+১", "০+০+০+১", "প্রয়োজনমত", "খাওয়ার পর"
+        ])
+        self.dosage_combo.setCurrentText("1+1+1")  # Default value
+        dose_frequency_layout.addWidget(self.dosage_combo)
+        
+        drug_details_layout.addLayout(dose_frequency_layout, 0, 1)
         
         drug_details_layout.addWidget(QLabel("Duration:"), 1, 0)
-        self.duration_entry = QLineEdit()
-        self.duration_entry.setPlaceholderText("e.g., 7 days")
-        drug_details_layout.addWidget(self.duration_entry, 1, 1)
+        
+        # ComboBox for duration with days and months - NOW WITH BENGALI
+        duration_layout = QHBoxLayout()
+        self.duration_combo = QComboBox()
+        self.duration_combo.setEditable(True)  # Allow custom entry
+        # English durations - days
+        for i in range(1, 15):
+            self.duration_combo.addItem(f"{i} day{'s' if i > 1 else ''}")
+        # English durations - months
+        for i in range(1, 7):
+            self.duration_combo.addItem(f"{i} month{'s' if i > 1 else ''}")
+        # Bengali durations - days
+        bengali_numbers = ["১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯", "১০", "১১", "১২", "১৩", "১৪"]
+        for i, num in enumerate(bengali_numbers, 1):
+            self.duration_combo.addItem(f"{num} দিন")
+        # Bengali durations - months
+        bengali_months = ["১", "২", "৩", "৪", "৫", "৬"]
+        for i, num in enumerate(bengali_months, 1):
+            self.duration_combo.addItem(f"{num} মাস")
+        
+        self.duration_combo.setCurrentText("7 days")  # Default value
+        duration_layout.addWidget(self.duration_combo)
+        
+        drug_details_layout.addLayout(duration_layout, 1, 1)
         
         drug_details_layout.addWidget(QLabel("Instructions:"), 2, 0)
-        self.instructions_entry = QLineEdit()
-        self.instructions_entry.setPlaceholderText("e.g., After meal")
-        drug_details_layout.addWidget(self.instructions_entry, 2, 1)
+        
+        # ComboBox for instructions with English and Bangla options
+        instructions_layout = QHBoxLayout()
+        self.instructions_combo = QComboBox()
+        self.instructions_combo.setEditable(True)  # Allow custom entry
+        self.instructions_combo.addItems([
+            "Before meal", 
+            "After meal", 
+            "খাবার আগে", 
+            "খাবার পরে"
+        ])
+        self.instructions_combo.setCurrentText("After meal")  # Default value
+        instructions_layout.addWidget(self.instructions_combo)
+        
+        drug_details_layout.addLayout(instructions_layout, 2, 1)
         
         add_drug_btn = QPushButton("Add Drug")
         add_drug_btn.clicked.connect(self.add_drug_to_prescription)
@@ -1147,7 +1247,7 @@ class MedicalPrescriptionSystemPyQt(QMainWindow):
         self.tab_widget.addTab(history_tab, "History")
     
     def create_images_tab(self):
-        """Create patient images tab with scrollbars"""
+        """Create patient images tab with enhanced features"""
         images_tab = QWidget()
         layout = QVBoxLayout(images_tab)
         
@@ -1170,29 +1270,252 @@ class MedicalPrescriptionSystemPyQt(QMainWindow):
         
         scroll_layout.addLayout(patient_select_layout)
         
-        # Image upload
-        upload_layout = QHBoxLayout()
+        # Image upload section
+        upload_group = QGroupBox("Upload New Image")
+        upload_layout = QVBoxLayout(upload_group)
+        
+        upload_controls_layout = QHBoxLayout()
         self.upload_image_btn = QPushButton("Select Image")
         self.upload_image_btn.clicked.connect(self.select_image)
         
         self.image_description = QLineEdit()
         self.image_description.setPlaceholderText("Image description...")
         
-        upload_layout.addWidget(self.upload_image_btn)
-        upload_layout.addWidget(self.image_description)
-        upload_layout.addStretch()
-        scroll_layout.addLayout(upload_layout)
+        upload_controls_layout.addWidget(self.upload_image_btn)
+        upload_controls_layout.addWidget(self.image_description)
+        upload_controls_layout.addStretch()
         
-        # Images display
+        upload_layout.addLayout(upload_controls_layout)
+        scroll_layout.addWidget(upload_group)
+        
+        # Images display section
+        images_display_group = QGroupBox("Patient Images")
+        images_display_layout = QVBoxLayout(images_display_group)
+        
         self.images_display = QWidget()
         self.images_layout = QVBoxLayout(self.images_display)
-        scroll_layout.addWidget(self.images_display)
+        images_display_layout.addWidget(self.images_display)
+        
+        scroll_layout.addWidget(images_display_group)
         
         scroll_area.setWidget(scroll_widget)
         layout.addWidget(scroll_area)
         
         self.tab_widget.addTab(images_tab, "Images")
-    
+
+    def load_patient_images(self):
+        """Load patient images with edit/delete options and full-screen viewing"""
+        try:
+            # Clear current images
+            for i in reversed(range(self.images_layout.count())): 
+                widget = self.images_layout.itemAt(i).widget()
+                if widget:
+                    widget.setParent(None)
+            
+            patient_id = self.images_patient_combo.currentData()
+            if not patient_id:
+                no_patient_label = QLabel("Please select a patient to view images.")
+                no_patient_label.setAlignment(Qt.AlignCenter)
+                self.images_layout.addWidget(no_patient_label)
+                return
+            
+            self.cursor.execute('''
+                SELECT * FROM patient_images 
+                WHERE patient_reg_no = ? 
+                ORDER BY date DESC
+            ''', (patient_id,))
+            
+            images = self.cursor.fetchall()
+            
+            if not images:
+                no_images_label = QLabel("No images found for this patient.")
+                no_images_label.setAlignment(Qt.AlignCenter)
+                self.images_layout.addWidget(no_images_label)
+                return
+            
+            # Create scroll area for images
+            images_scroll = QScrollArea()
+            images_scroll.setWidgetResizable(True)
+            images_scroll.setMinimumHeight(500)
+            
+            images_widget = QWidget()
+            images_grid = QVBoxLayout(images_widget)
+            
+            for image in images:
+                image_id, patient_reg_no, image_path, description, date = image
+                
+                # Create image group with border
+                image_group = QGroupBox(f"Image - {datetime.strptime(date, '%Y-%m-%d %H:%M:%S').strftime('%d/%m/%Y %I:%M %p')}")
+                image_group.setStyleSheet("QGroupBox { border: 2px solid #cccccc; border-radius: 5px; margin-top: 10px; }")
+                image_group_layout = QVBoxLayout(image_group)
+                
+                # Image display with clickable functionality
+                image_display_widget = QWidget()
+                image_display_layout = QHBoxLayout(image_display_widget)
+                
+                if os.path.exists(image_path):
+                    pixmap = QPixmap(image_path)
+                    if not pixmap.isNull():
+                        # Scale image for display
+                        scaled_pixmap = pixmap.scaled(400, 300, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                        image_label = QLabel()
+                        image_label.setPixmap(scaled_pixmap)
+                        image_label.setStyleSheet("border: 1px solid #aaaaaa; padding: 5px;")
+                        image_label.setCursor(Qt.PointingHandCursor)
+                        image_label.mousePressEvent = lambda event, path=image_path: self.view_image_fullscreen(path)
+                        
+                        # Add click message
+                        click_label = QLabel("📸 Click image to view full screen")
+                        click_label.setStyleSheet("color: #666666; font-size: 10px; font-style: italic;")
+                        click_label.setAlignment(Qt.AlignCenter)
+                        
+                        image_display_layout.addWidget(image_label)
+                    else:
+                        error_label = QLabel("Invalid image file")
+                        image_display_layout.addWidget(error_label)
+                else:
+                    missing_label = QLabel("Image file not found")
+                    image_display_layout.addWidget(missing_label)
+                
+                image_group_layout.addWidget(image_display_widget)
+                
+                # Description
+                if description:
+                    desc_label = QLabel(f"Description: {description}")
+                    desc_label.setStyleSheet("font-weight: bold; margin: 5px;")
+                    image_group_layout.addWidget(desc_label)
+                
+                # Action buttons (Edit and Delete)
+                button_layout = QHBoxLayout()
+                
+                # Edit button
+                edit_btn = QPushButton("Edit Description")
+                edit_btn.setStyleSheet("QPushButton { background-color: #2196F3; color: white; padding: 5px; }")
+                edit_btn.clicked.connect(lambda checked, img_id=image_id, current_desc=description: 
+                                       self.edit_image_description(img_id, current_desc))
+                
+                # Delete button
+                delete_btn = QPushButton("Delete Image")
+                delete_btn.setStyleSheet("QPushButton { background-color: #f44336; color: white; padding: 5px; }")
+                delete_btn.clicked.connect(lambda checked, img_id=image_id, img_path=image_path: 
+                                         self.delete_patient_image(img_id, img_path))
+                
+                button_layout.addWidget(edit_btn)
+                button_layout.addWidget(delete_btn)
+                button_layout.addStretch()
+                
+                image_group_layout.addLayout(button_layout)
+                image_group_layout.addWidget(click_label)  # Add click message below buttons
+                
+                images_grid.addWidget(image_group)
+            
+            # Add stretch to push everything to top
+            images_grid.addStretch()
+            
+            images_scroll.setWidget(images_widget)
+            self.images_layout.addWidget(images_scroll)
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load patient images: {str(e)}")
+
+    def view_image_fullscreen(self, image_path):
+        """Open image in full screen dialog"""
+        try:
+            if os.path.exists(image_path):
+                fullscreen_dialog = FullScreenImageDialog(image_path, self)
+                fullscreen_dialog.exec_()
+            else:
+                QMessageBox.warning(self, "Warning", "Image file not found!")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to open image: {str(e)}")
+
+    def edit_image_description(self, image_id, current_description):
+        """Edit image description"""
+        try:
+            # Create edit dialog
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Edit Image Description")
+            dialog.setModal(True)
+            dialog.setFixedSize(400, 200)
+            
+            layout = QVBoxLayout(dialog)
+            
+            # Description input
+            layout.addWidget(QLabel("Image Description:"))
+            description_edit = QTextEdit()
+            description_edit.setPlainText(current_description)
+            description_edit.setMaximumHeight(80)
+            layout.addWidget(description_edit)
+            
+            # Buttons
+            button_layout = QHBoxLayout()
+            save_btn = QPushButton("Save")
+            cancel_btn = QPushButton("Cancel")
+            
+            save_btn.clicked.connect(lambda: self.save_image_description(image_id, description_edit.toPlainText(), dialog))
+            cancel_btn.clicked.connect(dialog.reject)
+            
+            button_layout.addWidget(save_btn)
+            button_layout.addWidget(cancel_btn)
+            layout.addLayout(button_layout)
+            
+            dialog.exec_()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to edit image description: {str(e)}")
+
+    def save_image_description(self, image_id, new_description, dialog):
+        """Save updated image description to database"""
+        try:
+            self.cursor.execute('''
+                UPDATE patient_images 
+                SET description = ? 
+                WHERE id = ?
+            ''', (new_description.strip(), image_id))
+            
+            self.conn.commit()
+            dialog.accept()
+            
+            # Reload images to show updated description
+            self.load_patient_images()
+            
+            QMessageBox.information(self, "Success", "Image description updated successfully!")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to update image description: {str(e)}")
+
+    def delete_patient_image(self, image_id, image_path):
+        """Delete patient image after confirmation"""
+        try:
+            # Confirm deletion
+            reply = QMessageBox.question(
+                self, 
+                "Confirm Deletion", 
+                "Are you sure you want to delete this image?\n\nThis action cannot be undone!",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            
+            if reply == QMessageBox.Yes:
+                # Delete from database
+                self.cursor.execute("DELETE FROM patient_images WHERE id = ?", (image_id,))
+                self.conn.commit()
+                
+                # Delete physical file if it exists
+                try:
+                    if os.path.exists(image_path):
+                        os.remove(image_path)
+                except Exception as file_error:
+                    print(f"Warning: Could not delete image file: {file_error}")
+                
+                # Reload images
+                self.load_patient_images()
+                
+                QMessageBox.information(self, "Success", "Image deleted successfully!")
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to delete image: {str(e)}")
+
     # ==================== DATABASE MANAGEMENT METHODS ====================
     
     def save_doctor_info(self):
@@ -1515,9 +1838,12 @@ class MedicalPrescriptionSystemPyQt(QMainWindow):
                 QMessageBox.warning(self, "Warning", "Please select or enter a drug!")
                 return
             
-            dosage = self.dosage_entry.text().strip()
-            duration = self.duration_entry.text().strip()
-            instructions = self.instructions_entry.text().strip()
+            # Get dosage from combo box (allows custom entry)
+            dosage = self.dosage_combo.currentText().strip()
+            # Get duration from combo box (allows custom entry)
+            duration = self.duration_combo.currentText().strip()
+            # Get instructions from combo box (allows custom entry)
+            instructions = self.instructions_combo.currentText().strip()
             
             if not dosage:
                 QMessageBox.warning(self, "Warning", "Please enter dosage/frequency!")
@@ -1532,10 +1858,8 @@ class MedicalPrescriptionSystemPyQt(QMainWindow):
             self.drugs_table.setItem(row, 2, QTableWidgetItem(duration))
             self.drugs_table.setItem(row, 3, QTableWidgetItem(instructions))
             
-            # Clear drug form
-            self.dosage_entry.clear()
-            self.duration_entry.clear()
-            self.instructions_entry.clear()
+            # Clear drug form (keep default values in combos)
+            # The combos will keep their current selections for next drug
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to add drug: {str(e)}")
@@ -1888,72 +2212,6 @@ class MedicalPrescriptionSystemPyQt(QMainWindow):
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to upload image: {str(e)}")
-    
-    def load_patient_images(self):
-        """Load patient images"""
-        try:
-            # Clear current images
-            for i in reversed(range(self.images_layout.count())): 
-                self.images_layout.itemAt(i).widget().setParent(None)
-            
-            patient_id = self.images_patient_combo.currentData()
-            if not patient_id:
-                return
-            
-            self.cursor.execute('''
-                SELECT * FROM patient_images 
-                WHERE patient_reg_no = ? 
-                ORDER BY date DESC
-            ''', (patient_id,))
-            
-            images = self.cursor.fetchall()
-            
-            if not images:
-                no_images_label = QLabel("No images found for this patient.")
-                self.images_layout.addWidget(no_images_label)
-                return
-            
-            # Create scroll area for images
-            images_scroll = QScrollArea()
-            images_scroll.setWidgetResizable(True)
-            images_scroll.setMinimumHeight(400)
-            
-            images_widget = QWidget()
-            images_grid = QVBoxLayout(images_widget)
-            
-            for image in images:
-                image_id, patient_reg_no, image_path, description, date = image
-                
-                # Create image group
-                image_group = QGroupBox(f"Image - {date}")
-                image_group_layout = QVBoxLayout(image_group)
-                
-                # Image display
-                if os.path.exists(image_path):
-                    pixmap = QPixmap(image_path)
-                    if not pixmap.isNull():
-                        # Scale image for display
-                        scaled_pixmap = pixmap.scaled(400, 300, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                        image_label = QLabel()
-                        image_label.setPixmap(scaled_pixmap)
-                        image_group_layout.addWidget(image_label)
-                    else:
-                        image_group_layout.addWidget(QLabel("Invalid image file"))
-                else:
-                    image_group_layout.addWidget(QLabel("Image file not found"))
-                
-                # Description
-                if description:
-                    desc_label = QLabel(f"Description: {description}")
-                    image_group_layout.addWidget(desc_label)
-                
-                images_grid.addWidget(image_group)
-            
-            images_scroll.setWidget(images_widget)
-            self.images_layout.addWidget(images_scroll)
-            
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to load patient images: {str(e)}")
     
     def generate_prescription_pdf(self, prescription_data, output_path=None):
         """Generate professional PDF prescription using WeasyPrint"""
