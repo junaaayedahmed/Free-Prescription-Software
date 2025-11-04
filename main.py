@@ -2436,7 +2436,6 @@ class MedicalPrescriptionSystemPyQt(QMainWindow):
             </style>
         </head>
         <body>
-            <div class="top-spacer"></div> <!-- ADDED: This creates space at the top -->
             <div class="prescription-container">
                 <div class="header">
                     <div class="doctor-name">Dr. {doctor_info['name']}</div>
